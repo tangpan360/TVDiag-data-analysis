@@ -1,0 +1,28 @@
+# Python 缓存文件
+__pycache__/
+*.py[cod]
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# 数据文件
+/extractor/MicroSS
+
+# 日志文件
+*.log
+
+# IDE 和编辑器配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db

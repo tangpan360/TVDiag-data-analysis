@@ -123,8 +123,19 @@ def read_all_metrics():
     return data
 
 if __name__ == '__main__':
-    # trace_df = process_traces("trace")
-    # log_df = process_logs("business")
+    # 记录整体处理开始时间
+    total_start_time = time.time()
+    
+    # 注释掉的代码：处理原始trace和log数据
+    trace_process_start = time.time()
+    trace_df = process_traces("MicroSS/trace")
+    trace_process_end = time.time()
+    print(f"处理trace数据用时: {trace_process_end - trace_process_start:.2f}秒")
+    
+    log_process_start = time.time()
+    log_df = process_logs("MicroSS/business")
+    log_process_end = time.time()
+    print(f"处理log数据用时: {log_process_end - log_process_start:.2f}秒")
 
     label_df = pd.read_csv("MicroSS/gaia.csv")
     label_df['st_time'] = label_df['st_time'].apply(lambda x: time2stamp(str(x).split('.')[0]))
