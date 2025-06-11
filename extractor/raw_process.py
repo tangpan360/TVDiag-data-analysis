@@ -137,6 +137,7 @@ if __name__ == '__main__':
     log_process_end = time.time()
     print(f"处理log数据用时: {log_process_end - log_process_start:.2f}秒")
 
+    # 读取故障标签数据
     label_df = pd.read_csv("MicroSS/gaia.csv")
     label_df['st_time'] = label_df['st_time'].apply(lambda x: time2stamp(str(x).split('.')[0]))
     label_df['ed_time'] = label_df['ed_time'].apply(lambda x: time2stamp(str(x).split('.')[0]))
