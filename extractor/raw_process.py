@@ -49,7 +49,7 @@ def process_traces(dir):
     trace_df = spans_df_left_join(trace_df)
     trace_df = trans2timestamp(trace_df)
 
-    trace_df.to_csv(f"trace.csv")
+    trace_df.to_csv(f"MicroSS/trace.csv")
 
 
 def process_logs(dir):
@@ -66,7 +66,7 @@ def process_logs(dir):
             df = extract_Date(df)
             dfs.append(df)
     log_df = pd.concat(dfs)
-    log_df.to_csv("log.csv")
+    log_df.to_csv("MicroSS/log.csv")
 
 
 def extract_traces(trace_df: pd.DataFrame, start_time):
@@ -126,16 +126,16 @@ if __name__ == '__main__':
     # 记录整体处理开始时间
     total_start_time = time.time()
     
-    # 注释掉的代码：处理原始trace和log数据
-    trace_process_start = time.time()
-    trace_df = process_traces("MicroSS/trace")
-    trace_process_end = time.time()
-    print(f"处理trace数据用时: {trace_process_end - trace_process_start:.2f}秒")
-    
-    log_process_start = time.time()
-    log_df = process_logs("MicroSS/business")
-    log_process_end = time.time()
-    print(f"处理log数据用时: {log_process_end - log_process_start:.2f}秒")
+    # # 注释掉的代码：处理原始trace和log数据
+    # trace_process_start = time.time()
+    # trace_df = process_traces("MicroSS/trace")
+    # trace_process_end = time.time()
+    # print(f"处理trace数据用时: {trace_process_end - trace_process_start:.2f}秒")
+    #
+    # log_process_start = time.time()
+    # log_df = process_logs("MicroSS/business")
+    # log_process_end = time.time()
+    # print(f"处理log数据用时: {log_process_end - log_process_start:.2f}秒")
 
     # 读取故障标签数据
     label_df = pd.read_csv("MicroSS/gaia.csv")
@@ -192,5 +192,5 @@ if __name__ == '__main__':
         process_time = end_time - start_time
         print(fr"完成{idx}, 用时{process_time}")
 
-    # io_util.save("MicroSS/pre-data.pkl", pre_data)
+    io_util.save("MicroSS/pre-data.pkl", pre_data)
     io_util.save("MicroSS/post-data-10.pkl", post_data)
