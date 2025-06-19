@@ -984,3 +984,315 @@ Drain算法的行为由`drain3.ini`配置文件控制，主要参数包括：
 3. **统计信息**：每个模板的出现频次，用于识别常见和异常模式
 
 这为后续的日志事件提取和异常检测奠定了基础。
+
+# 4. event_extractor.py 异常事件提取
+
+`event_extractor.py`是TVDiag数据处理流程的第四步，也是关键的异常检测环节。该文件负责整合和协调三种不同类型的事件提取器，从多维度监控数据中提取关键的异常事件，为后续故障诊断提供基础支撑。
+
+## 4.1 整体处理流程
+
+`event_extractor.py`的核心功能是对监控数据进行异常事件提取，大致流程如下：
+
+```python
+# 加载预处理后的监控数据和标签数据
+data: dict = io_util.load('MicroSS/post-data-10.pkl')
+label_df = pd.read_csv('MicroSS/gaia.csv', index_col=0)
+
+# 加载预训练好的异常检测器
+metric_detectors = io_util.load('MicroSS/detector/metric-detector-strict-host.pkl')
+trace_detectors = io_util.load('MicroSS/detector/trace-detector.pkl')
+```
+
+1. **加载数据和检测器**：
+   - 加载故障后的监控数据(`post-data-10.pkl`)
+   - 加载标签数据(`gaia.csv`)
+   - 加载之前在`preprocess.py`中训练好的指标和追踪异常检测器
+
+2. **初始化存储容器**：
+   ```python
+   metric_events_dic = defaultdict(list)  # 存储各时间点的指标异常事件
+   trace_events_dic = defaultdict(list)    # 存储各时间点的追踪异常事件
+   log_events_dic = defaultdict(list)     # 存储各时间点的日志异常事件
+   ```
+
+3. **遍历故障时间点**：
+   ```python
+   for idx, row in tqdm(label_df.iterrows(), total=label_df.shape[0]):
+       chunk = data[idx]  # 获取当前时间点的数据块
+   ```
+
+   对每个标记的故障时间点，分别执行三种事件提取。
+
+4. **保存提取结果**：
+   ```python
+   io_util.save_json('events/log/log.json', log_events_dic)
+   io_util.save_json('events/metric/metric.json', metric_events_dic)
+   io_util.save_json('events/trace/trace.json', trace_events_dic)
+   ```
+
+## 4.2 指标异常事件提取
+
+指标异常事件提取基于3-sigma规则，检测指标值是否超出正常范围：
+
+```python
+# 提取指标异常事件
+st = time.time()
+metric_events = []
+# 遍历每个pod-host组合的指标数据
+for pod_host, kpi_dic in chunk['metric'].items():
+    # 使用3-sigma方法检测异常指标
+    kpi_events = extract_metric_events(pod_host, kpi_dic, metric_detectors[pod_host])
+    metric_events.extend(kpi_events)
+metric_costs.append(time.time()-st)  # 记录耗时
+metric_events_dic[idx] = metric_events  # 存储当前时间点的指标异常
+```
+
+### 4.2.1 3-Sigma异常检测方法
+
+`metric_event_extractor.py`中的`k_sigma`函数实现了3-sigma异常检测：
+
+```python
+def k_sigma(detector, test_arr, k=3):
+    """使用k-sigma方法检测异常值"""
+    mean = detector[0]  # 均值
+    std = detector[1]   # 标准差
+    # 计算上下界
+    up, lb = mean + k * std, mean - k * std
+
+    # 遍历测试数组
+    for idx, v in enumerate(test_arr.tolist()):
+        if v > up:  # 高于上界
+            return idx, 'up'    # 返回异常索引和方向
+        elif v < lb:  # 低于下界
+            return idx, 'down'
+    
+    # 无异常
+    return -1, None
+```
+
+**处理示例**：
+假设某个指标的正常均值和标准差为：`mean=10, std=2`，那么:
+- 上界: `up = 10 + 3*2 = 16`
+- 下界: `lb = 10 - 3*2 = 4`
+
+对于测试数据`[7, 9, 15, 18, 8]`，第3个值(18)超过了上界(16)，因此会被检测为向上异常(`up`)。
+
+### 4.2.2 指标异常事件格式
+
+每个检测到的指标异常事件格式为`[pod, host, kpi, direction]`，例如：
+```
+["dbservice1", "0.0.0.4", "docker_memory_stats_rss", "up"]
+```
+
+这表示`dbservice1`服务在主机`0.0.0.4`上的`docker_memory_stats_rss`指标异常上升。
+
+## 4.3 追踪异常事件提取
+
+追踪异常事件提取基于孤立森林算法，检测服务间调用的异常模式：
+
+```python
+# 提取追踪异常事件
+st = time.time()
+# 使用孤立森林检测追踪异常(性能下降、500/400错误)
+trace_events = extract_trace_events(chunk['trace'], trace_detectors)
+trace_events_dic[idx] = trace_events
+trace_costs.append(time.time()-st)
+```
+
+### 4.3.1 滑动窗口特征提取
+
+`trace_event_extractor.py`中的`slide_window`函数先对追踪数据进行特征提取：
+
+```python
+def slide_window(df, win_size):
+    """滑动窗口函数，计算时间窗口内的追踪指标"""
+    sts, ds, err_500_ps, err_400_ps=[], [], [], []
+    
+    # 计算每个span的持续时间
+    df['duration'] = df['end_time']-df['start_time']
+    
+    # 初始化窗口起始时间和最大时间
+    i, time_max=df['start_time'].min(), df['start_time'].max()
+    
+    # 滑动窗口处理
+    while i < time_max:
+        # 获取当前窗口内的数据
+        temp_df = df[(df['start_time']>=i)&(df['start_time']<=i+win_size)]
+        if temp_df.empty:
+            i+=win_size
+            continue
+            
+        # 记录窗口开始时间    
+        sts.append(i)
+        
+        # 统计500和400错误数量
+        err_500_ps.append(len(temp_df[temp_df['status_code']==500]))
+        err_400_ps.append(len(temp_df[temp_df['status_code']==400]))
+        
+        # 计算窗口平均持续时间
+        ds.append(temp_df['duration'].mean())
+        i+=win_size
+```
+
+对每个30秒的时间窗口，计算三类特征：
+- 平均响应时间
+- 500错误数量
+- 400错误数量
+
+### 4.3.2 孤立森林异常检测
+
+使用预训练的孤立森林模型检测异常特征：
+
+```python
+def iforest(detector, test_arr):
+    """使用孤立森林模型进行异常检测"""
+    labels = detector.predict(test_arr.reshape(-1,1)).tolist()
+    try:
+        idx = labels.index(-1)  # -1表示异常
+    except:
+        return -1
+    return idx
+```
+
+孤立森林算法基于"隔离"原理，异常点通常更容易被孤立出来。
+
+### 4.3.3 追踪异常事件格式
+
+每个检测到的追踪异常事件格式为`[源服务, 目标服务, 操作, 异常类型]`，例如：
+```
+["webservice1", "dbservice1", "http://0.0.0.1:9379/db_query", "PD"]
+```
+
+这表示从`webservice1`到`dbservice1`的`db_query`操作出现了性能下降(PD)。异常类型包括：
+- `PD`: 性能下降(Performance Degradation)
+- `500`: HTTP 500错误
+- `400`: HTTP 400错误
+
+## 4.4 日志异常事件提取
+
+日志异常事件提取基于两种规则：低频模板和错误模板：
+
+```python
+# 提取日志异常事件
+st = time.time()
+miner = io_util.load('./drain/gaia-drain.pkl')  # 加载预训练的Drain日志模板挖掘器
+log_df = chunk['log']  # 获取当前时间点的日志数据
+# 检测低频日志模板和错误日志(阈值设为0.5)
+log_events = extract_log_events(log_df, miner, 0.5)
+log_events_dic[idx] = log_events
+log_costs.append(time.time()-st)
+```
+
+### 4.4.1 日志异常判定规则
+
+`log_event_extractor.py`使用两种规则判定日志异常：
+
+```python
+# 筛选异常模板
+for idx, c in enumerate(sorted_clusters):
+    # 1. 选择前low_freq_p百分比的低频模板
+    if idx < int(low_freq_p * len(sorted_clusters)):
+        select_events.append(c.cluster_id)
+        continue
+    # 2. 选择包含错误关键词的模板
+    for keyword in err_keywords:
+        if keyword in c.get_template().lower():
+            select_events.append(c.cluster_id)
+            break
+```
+
+1. **低频模板**: 出现频率低于阈值(0.5)的模板被视为异常
+2. **错误关键词**: 包含"error"、"fail"或"exception"关键词的模板被视为异常
+
+### 4.4.2 日志模板匹配流程
+
+每条日志消息通过以下步骤进行处理：
+1. 使用预训练的Drain模型匹配日志模板
+2. 如果没有匹配到模板，赋予特殊ID `-1`
+3. 筛选出满足异常条件的模板ID
+4. 按模板ID和服务名分组统计
+
+### 4.4.3 日志异常事件格式
+
+每个检测到的日志异常事件格式为`[服务名, 模板ID]`，例如：
+```
+["dbservice1", "35"]
+```
+
+这表示`dbservice1`服务产生了ID为`35`的异常日志模板。
+
+## 4.5 事件提取效率分析
+
+代码中还记录了三类事件提取的平均耗时：
+```python
+print(f'the time cost of extract metric events is {metric_time}')
+print(f'the time cost of extract trace events is {trace_time}')
+print(f'the time cost of extract log events is {log_time}')
+```
+
+**运行结果**：
+- 指标事件提取: 0.18秒/故障点
+- 追踪事件提取: 0.23秒/故障点
+- 日志事件提取: 0.66秒/故障点
+
+日志事件提取耗时最长，这主要是由于日志模板匹配的复杂性。
+
+## 4.6 异常事件存储
+
+最终，所有提取的异常事件按照类型分别存储为JSON文件：
+
+```python
+# 创建存储目录
+import os
+os.makedirs('events/log', exist_ok=True)
+os.makedirs('events/metric', exist_ok=True)
+os.makedirs('events/trace', exist_ok=True)
+
+# 保存各类异常事件数据
+io_util.save_json('events/log/log.json', log_events_dic)
+io_util.save_json('events/metric/metric.json', metric_events_dic)
+io_util.save_json('events/trace/trace.json', trace_events_dic)
+```
+
+### 4.6.1 输出JSON示例
+
+**指标异常(metric.json)**:
+```json
+{
+  "0": [
+    ["dbservice1", "0.0.0.4", "docker_memory_stats_rss", "up"],
+    ["webservice1", "0.0.0.1", "docker_cpu_total", "up"]
+  ],
+  "1": [
+    ["redisservice1", "0.0.0.2", "docker_memory_limit", "down"]
+  ]
+}
+```
+
+**追踪异常(trace.json)**:
+```json
+{
+  "0": [
+    ["webservice1", "dbservice1", "http://0.0.0.1:9379/db_query", "PD"],
+    ["mobservice1", "redisservice1", "http://0.0.0.3:9377/redis_write", "500"]
+  ],
+  "1": [
+    ["webservice2", "logservice1", "http://0.0.0.5:9378/log_write", "400"]
+  ]
+}
+```
+
+**日志异常(log.json)**:
+```json
+{
+  "0": [
+    ["dbservice1", "35"],
+    ["redisservice1", "42"]
+  ],
+  "1": [
+    ["logservice1", "17"]
+  ]
+}
+```
+
+这些异常事件文件构成了故障诊断的重要依据，下一步将用于构建故障依赖图和定位故障根因。

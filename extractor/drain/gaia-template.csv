@@ -1,0 +1,40 @@
+id,template,count
+5,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,459810
+3,"<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> now call service:<:POD:>, inst:<:IP:> as a downstream service",447975
+2,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> the list of all available services are <:POD:>: <:IP:> <:POD:>: <:IP:>,368360
+1,<:TIME:> <:*:> <:HOST:> <:HOST:> <:POD:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> downstream service,214773
+28,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> redis write success,207755
+11,<:TIME:> <:*:> <:HOST:> <:HOST:> <:POD:> <:*:> <:*:> <:*:> <:*:> <:*:>,202189
+24,"<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> request <:IP:> and param={'uuid': '<:UID:>', 'user id': <:*:>",159361
+4,"<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> request <:IP:> and param={'keys': '<:UID:>', 'value': '', 'ex': 10}",106629
+6,"<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> complete information: {'uuid': '<:UID:>', 'user id': <:*:>",101566
+29,<:TIME:> <:*:> <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> <:*:> <:*:> <:*:> <:*:>,101300
+10,"<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> request <:IP:> and param={'keys': '<:UID:>', 'value': <:*:>",101065
+13,<:TIME:> INFO <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> the list of all available services are <:POD:>: <:IP:> <:POD:>: <:IP:>,100966
+14,<:TIME:> INFO <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,100946
+15,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> query = select passwards from username table where user <:*:>,96009
+25,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> the list of all available services are <:POD:>: <:IP:>,79682
+17,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,18148
+19,<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,5890
+31,<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> get a error [Errno 2] No such file or directory: 'resources/source file/source file.csv',5044
+18,"<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> {trace id} password in database of {user} is null, the user is not registered",1798
+16,"<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> (pymysql.err.ProgrammingError) (1146, ""Table 'cloudwise micross.system metric datas' doesn't exist"")[SQL: select service names, system data time, system cpu utilization, system memory usage,system disk usage, disk io read count, disk io write count,system network, network io read count, network io write count from system metric datas](Background on this error at: <:IP:>",1395
+20,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> <:*:> <:*:> <:*:> token generate success <:*:>,1381
+21,"<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> (pymysql.err.OperationalError) (1054, ""Unknown column 'system data time' in 'field list'"")[SQL: select service name, system data time, system cpu utilization, system memory usage,system disk usage, disk io read count, disk io write count,system network, network io read count, network io write count from `metric table 2021-05`](Background on this error at: <:IP:>",1357
+27,<:TIME:> <:*:> <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,1295
+26,<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,876
+12,"<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> uuid:<:UID:> information has expired, mobile phone login is invalid",552
+22,"<:TIME:> ERROR <:HOST:> <:HOST:> <:POD:> <:*:> (pymysql.err.OperationalError) (1054, ""Unknown column 'system data time' in 'field list'"")[SQL: select service name, system data time, system cpu utilization, system memory usage,system disk usage, disk io read count, disk io write count,system network, network io read count, network io write count from `metric table 2021-05`](Background on this error at: <:IP:>",239
+30,<:TIME:> ERROR <:HOST:> <:HOST:> <:POD:> <:*:> (pymysql.err.OperationalError) <:FIX MESSAGE:>(Background on this error at: <:IP:>,233
+32,<:TIME:> INFO <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> redis write success,221
+23,"<:TIME:> ERROR <:HOST:> <:HOST:> <:POD:> <:*:> (pymysql.err.ProgrammingError) (1146, ""Table 'cloudwise micross.system metric datas' doesn't exist"")[SQL: select service names, system data time, system cpu utilization, system memory usage,system disk usage, disk io read count, disk io write count,system network, network io read count, network io write count from system metric datas](Background on this error at: <:IP:>",194
+9,<:TIME:> <:*:> <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,111
+34,<:TIME:> INFO <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> query = select passwards from username table where user <:*:>,71
+8,<:TIME:> INFO <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,34
+7,"<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> unknown error occurred, status code == 200, message:{'message': 'redis write success, keys=<:UID:>, value=', 'status code': 200}",14
+35,<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> cedd958df88ac8b1 <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:> <:*:>,8
+33,<:TIME:> ERROR <:HOST:> <:HOST:> <:POD:> c5fe3d5b4617a1a0 get a error [Errno 2] No such file or directory: 'resources/source file/source file.csv',2
+36,<:TIME:> INFO <:HOST:> <:HOST:> <:POD:> <:*:> <:UID:>-ydDVPRrH-K>1}?T{ &NHS token generate success <:TOKEN:>-MX0 <:*:>,2
+37,"<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> <:*:> call the url <:IP:> and param {'uuid': '<:UID:>'} error --HTTPConnectionPool(host='<:HOST:>', port=9384): Max retries exceeded with url: /login query redis info?uuid=<:UID:> (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at <:*:> Failed to establish a new connection: [Errno 111] Connection refused'))",2
+38,"<:TIME:> ERROR <:HOST:> <:HOST:> <:POD:> {traci id} uuid expired, invalid phone request",1
+39,"<:TIME:> ERROR <:HOST:> <:POD:> <:FILE METHOD LINE:> 41665ae8ee47ea1c call the url <:IP:> and param {'uuid': '<:UID:>'} error --('Connection aborted.', ConnectionResetError<:FIX MESSAGE:>)",1
