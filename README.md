@@ -172,7 +172,28 @@ GAIA-DataSet-release-v1.0
 
 ### 解压方法
 
-直接解压 `.zip` 文件即可，压缩工具会自动识别并合并所有分卷文件。
+windows直接解压 `.zip` 文件即可，压缩工具会自动识别并合并所有分卷文件。
+
+ubuntu上推荐使用7z解压，安装 7zip（如未安装）：
+```bash
+sudo apt install p7zip-full  # Ubuntu/Debian
+```
+在business文件夹中解压：
+```bash
+7z x business_split.zip
+```
+在metric文件夹中解压：
+```bash
+7z x metric_split.zip
+```
+在run文件夹中解压：
+```bash
+7z x run.zip
+```
+在trace文件夹中解压：
+```bash
+7z x trace_split.zip
+```
 
 将 business_split.zip、metric_split.zip、trace_split.zip、run.zip 解压后如下：
 
