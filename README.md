@@ -1296,3 +1296,252 @@ io_util.save_json('events/trace/trace.json', trace_events_dic)
 ```
 
 这些异常事件文件构成了故障诊断的重要依据，下一步将用于构建故障依赖图和定位故障根因。
+
+# 5. deployment_extractor.py 服务依赖关系提取
+
+`deployment_extractor.py`是TVDiag数据处理流程的第五步，也是最后一个预处理步骤。该文件的主要功能是构建微服务系统的依赖关系图，将物理部署信息和服务调用关系结合起来，为后续的故障诊断和根因定位提供拓扑结构支持。
+
+## 5.1 整体处理流程
+
+`deployment_extractor.py`的核心任务是构建服务依赖关系图，处理流程如下：
+
+```python
+# 加载故障后的数据
+failure_post_data: dict = io_util.load('MicroSS/post-data-10.pkl')
+# 加载标签数据，并将第一列设置为索引
+label_df = pd.read_csv('MicroSS/gaia.csv', index_col=0)
+```
+
+1. **加载数据**：
+   - 加载故障后的监控数据(`post-data-10.pkl`)
+   - 加载标签数据(`gaia.csv`)
+
+2. **遍历故障事件**：
+   ```python
+   for idx, row in tqdm(label_df.iterrows(), total=label_df.shape[0]):
+       # 获取当前故障对应的数据块
+       chunk = failure_post_data[idx]
+       # 获取trace数据
+       trace_df = chunk['trace']
+   ```
+
+## 5.2 构建节点到服务的映射关系
+
+首先，通过分析指标文件名提取节点上部署的服务信息：
+
+```python
+# 构建节点到服务的映射关系
+node2svcs = defaultdict(list)
+# 遍历metric目录下的所有文件
+for f in os.listdir('./MicroSS/metric'):
+    # 解析文件名获取服务名和主机名
+    splits = f.split('_')
+    svc, host = splits[0], splits[1]
+    # 过滤掉系统服务
+    if svc in ['system', 'redis', 'zookeeper']:
+        continue
+    # 如果服务还未添加到该节点的服务列表中，则添加
+    if svc not in node2svcs[host]:
+        node2svcs[host].append(svc)
+```
+
+该步骤通过分析指标文件名(如`dbservice1_0.0.0.4_docker_cpu_core_0_pct_2021-07-01_2021-07-15.csv`)提取服务名和主机名，并构建从主机到服务的映射关系。
+
+### 5.2.1 节点到服务映射示例
+
+对于以下指标文件：
+```
+dbservice1_0.0.0.4_docker_cpu_core_0_pct_2021-07-01_2021-07-15.csv
+webservice1_0.0.0.1_docker_cpu_core_0_pct_2021-07-01_2021-07-15.csv
+mobservice2_0.0.0.2_docker_cpu_core_0_pct_2021-07-01_2021-07-15.csv
+```
+
+构建的映射关系为：
+```
+{
+    '0.0.0.4': ['dbservice1'],
+    '0.0.0.1': ['webservice1'],
+    '0.0.0.2': ['mobservice2']
+}
+```
+
+## 5.3 捕获同一节点上服务的影响关系
+
+接下来，为同一节点上的服务创建双向影响关系：
+
+```python
+# 处理每个节点上的服务关系
+for node, pods in node2svcs.items():
+    # 将当前节点的服务添加到总服务列表中
+    svcs.extend(pods)
+    # 为同一节点上的服务创建双向影响关系
+    for i in range(len(pods)):
+        for j in range(i + 1, len(pods)):
+            influences.append([pods[i], pods[j]]) 
+            influences.append([pods[j], pods[i]])
+```
+
+这一步骤基于这样的假设：部署在同一节点上的服务可能会相互影响。例如，如果一个服务占用了大量CPU或内存资源，可能会影响同一节点上的其他服务。
+
+### 5.3.1 同节点服务影响关系示例
+
+假设在节点`0.0.0.3`上部署了`dbservice2`和`logservice1`两个服务，则生成的影响关系为：
+```
+['dbservice2', 'logservice1']
+['logservice1', 'dbservice2']
+```
+
+## 5.4 捕获服务调用关系
+
+然后，从追踪数据中提取服务间的调用关系：
+
+```python
+# 捕获服务调用关系
+edges = []
+# 定义调用关系的列名
+edge_columns = ['service_name', 'parent_name']
+# 从trace数据中提取调用关系，并去重
+calls = trace_df.dropna(subset=['parent_name']).drop_duplicates(subset=edge_columns)[edge_columns].values.tolist()
+# 将调用关系和影响关系合并
+calls.extend(influences)
+# 对合并后的关系去重    
+calls = pd.DataFrame(calls).drop_duplicates().reset_index(drop=True).values.tolist()
+```
+
+这一步从追踪数据中提取服务间的调用关系，并与之前识别的同节点影响关系合并，形成完整的服务依赖图。
+
+### 5.4.1 服务调用关系示例
+
+假设追踪数据包含以下调用关系：
+```
+['dbservice1', 'webservice1']  # dbservice1被webservice1调用
+['redisservice1', 'mobservice2']  # redisservice1被mobservice2调用
+```
+
+合并同节点影响关系后可能形成如下依赖关系：
+```
+['dbservice1', 'webservice1']
+['redisservice1', 'mobservice2']
+['dbservice2', 'logservice1']
+['logservice1', 'dbservice2']
+```
+
+## 5.5 将服务关系转换为索引形式
+
+最后，将服务名转换为索引形式，以便于图算法处理：
+
+```python
+# 将服务关系转换为索引形式
+for call in calls:
+    source, target = call[1], call[0]
+    source_idx, target_idx = svcs.index(source), svcs.index(target)
+    edges.append([source_idx, target_idx])
+# 将处理结果保存到数据块中
+chunk['nodes'] = svcs
+chunk['edges'] = edges
+```
+
+这一步将服务名替换为其在服务列表中的索引位置，便于后续图算法处理。
+
+### 5.5.1 索引转换示例
+
+假设服务列表和关系如下：
+```
+svcs = ['webservice1', 'dbservice1', 'mobservice2', 'redisservice1', 'logservice1', 'dbservice2']
+calls = [
+    ['dbservice1', 'webservice1'],
+    ['redisservice1', 'mobservice2']
+]
+```
+
+转换后的边为：
+```
+edges = [
+    [0, 1],  # webservice1 -> dbservice1
+    [2, 3]   # mobservice2 -> redisservice1
+]
+```
+
+## 5.6 保存服务依赖关系
+
+处理完所有故障事件后，将节点和边的关系数据保存为JSON文件：
+
+```python
+# 保存节点和边的关系数据
+edges = {}
+nodes = {}
+# 遍历所有故障事件
+for idx, row in tqdm(label_df.iterrows(), total=label_df.shape[0]):
+    chunk = failure_post_data[idx]
+    # 收集每个故障的边和节点信息
+    edges[idx] = chunk['edges']
+    nodes[idx] = chunk['nodes']
+# 将结果保存为json文件
+io_util.save_json('MicroSS/nodes.json', nodes)
+io_util.save_json('MicroSS/edges.json', edges)
+```
+
+### 5.6.1 输出JSON示例
+
+**nodes.json**:
+```json
+{
+  "0": ["webservice1", "dbservice1", "mobservice2", "redisservice1", "logservice1"],
+  "1": ["webservice2", "dbservice2", "mobservice1", "redisservice2"]
+}
+```
+
+**edges.json**:
+```json
+{
+  "0": [
+    [0, 1],  // webservice1 -> dbservice1
+    [2, 3],  // mobservice2 -> redisservice1
+    [1, 4]   // dbservice1 -> logservice1
+  ],
+  "1": [
+    [0, 1],  // webservice2 -> dbservice2
+    [0, 2]   // webservice2 -> mobservice1
+  ]
+}
+```
+
+## 5.7 服务依赖图构建方法分析
+
+`deployment_extractor.py`采用了两种方法来构建服务依赖图：
+
+1. **物理部署依赖**：
+   - 基于服务的部署位置
+   - 同一节点上的服务之间存在双向影响关系
+   - 优点：反映了资源竞争问题
+   - 缺点：可能引入不必要的依赖
+
+2. **服务调用依赖**：
+   - 基于服务间的实际调用关系
+   - 从追踪数据中提取
+   - 优点：反映了实际的服务交互
+   - 缺点：可能因为追踪数据不完整而遗漏依赖
+
+通过合并这两类依赖关系，`deployment_extractor.py`构建了一个更全面的服务依赖图，为后续的故障传播分析和根因定位提供了拓扑基础。
+
+## 5.8 服务依赖图的应用
+
+服务依赖图在微服务系统的故障诊断中具有重要意义：
+
+1. **故障传播分析**：
+   - 依赖关系决定了故障可能的传播路径
+   - 帮助识别故障的级联效应
+
+2. **根因定位**：
+   - 结合异常事件和依赖图，可以推断最初的故障源
+   - 区分直接原因和间接影响
+
+3. **故障模式匹配**：
+   - 不同类型的故障在依赖图上表现出不同的异常模式
+   - 可用于识别重复出现的故障类型
+
+4. **系统健康监控**：
+   - 依赖图可用于预测潜在的脆弱点
+   - 指导监控资源的优化分配
+
+通过这种方式构建的服务依赖图是TVDiag系统进行故障诊断和根因分析的基础框架。
