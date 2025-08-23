@@ -28,6 +28,16 @@ extractor
 
 数据集官方介绍地址[Dataset description](https://docs.aiops.cloudwise.com/zh/gaia/dataset-description.html#micross)
 
+## 数据集下载
+
+在开始数据处理之前，首先需要下载GAIA数据集。使用以下命令下载数据集：
+
+```bash
+git clone --branch release-v1.0 https://github.com/CloudWise-OpenSource/GAIA-DataSet.git
+```
+
+该命令会直接克隆仓库并检出到 `release-v1.0` 标签所指向的代码状态，下载完成后会得到完整的GAIA数据集文件。
+
 GAIA 数据集包含来自 MicroSS 和 Companion Data 的数据，旨在支持根因分析算法的评估。以下是数据集的主要特点和结构：
 
 ### 数据集概述
