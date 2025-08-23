@@ -3,47 +3,51 @@ import pandas as pd
 from collections import defaultdict
 from tqdm import tqdm  # 用于显示进度条
 from utils import io_util
+import os  # 用于创建目录
 
-# # 加载标签数据和预处理数据
-# labels = pd.read_csv('MicroSS/gaia.csv')  # 读取标签数据
-# failure_pre_data: dict = io_util.load('MicroSS/pre-data.pkl')  # 加载预处理数据
-#
-# # 初始化存储正常指标和追踪数据的容器
-# normal_metrics = {}  # 存储各pod的指标数据
-# normal_traces = defaultdict(list)  # 存储追踪数据，使用defaultdict自动初始化列表
-#
-# # 遍历标签数据，构建正常指标和追踪数据集
-# for idx, row in tqdm(labels.iterrows(), total=labels.shape[0]):
-#     if row['data_type'] == 'test':  # 跳过测试数据
-#         continue
-#     index = row['index']
-#     chunk = failure_pre_data[index]  # 获取对应索引的数据块
-#
-#     # 处理指标数据
-#     for pod, kpi_dic in chunk['metric'].items():
-#         if pod not in normal_metrics.keys():
-#             normal_metrics[pod] = defaultdict(list)  # 为每个pod初始化指标容器
-#         for kpi, kpi_df in kpi_dic.items():
-#             normal_metrics[pod][kpi].append(kpi_df)  # 收集各pod的指标数据
-#
-#     # 处理追踪数据
-#     trace_df = chunk['trace']
-#     # 从URL中提取操作名称（去掉查询参数）
-#     trace_df['operation'] = trace_df['url'].str.split('?').str[0]
-#     # 按父服务、目标服务和操作分组
-#     trace_gp = trace_df.groupby(['parent_name', 'service_name', 'operation'])
-#     for (src, dst, op), call_df in trace_gp:
-#         name = src + '-' + dst + '-' + op  # 生成唯一标识符
-#         normal_traces[name].append(call_df)  # 收集追踪数据
-#
-# # 合并各pod的指标数据
-# for pod in normal_metrics.keys():
-#     for kpi, kpi_dfs in normal_metrics[pod].items():
-#         normal_metrics[pod][kpi] = pd.concat(kpi_dfs)  # 将列表中的DataFrame合并
-#
-# # 保存处理后的数据
-# io_util.save('MicroSS/detector/normal_traces.pkl', normal_traces)
-# io_util.save('MicroSS/detector/normal_metrics.pkl', normal_metrics)
+# 加载标签数据和预处理数据
+labels = pd.read_csv('MicroSS/gaia.csv')  # 读取标签数据
+failure_pre_data: dict = io_util.load('MicroSS/pre-data.pkl')  # 加载预处理数据
+
+# 初始化存储正常指标和追踪数据的容器
+normal_metrics = {}  # 存储各pod的指标数据
+normal_traces = defaultdict(list)  # 存储追踪数据，使用defaultdict自动初始化列表
+
+# 遍历标签数据，构建正常指标和追踪数据集
+for idx, row in tqdm(labels.iterrows(), total=labels.shape[0]):
+    if row['data_type'] == 'test':  # 跳过测试数据
+        continue
+    index = row['index']
+    chunk = failure_pre_data[index]  # 获取对应索引的数据块
+
+    # 处理指标数据
+    for pod, kpi_dic in chunk['metric'].items():
+        if pod not in normal_metrics.keys():
+            normal_metrics[pod] = defaultdict(list)  # 为每个pod初始化指标容器
+        for kpi, kpi_df in kpi_dic.items():
+            normal_metrics[pod][kpi].append(kpi_df)  # 收集各pod的指标数据
+
+    # 处理追踪数据
+    trace_df = chunk['trace']
+    # 从URL中提取操作名称（去掉查询参数）
+    trace_df['operation'] = trace_df['url'].str.split('?').str[0]
+    # 按父服务、目标服务和操作分组
+    trace_gp = trace_df.groupby(['parent_name', 'service_name', 'operation'])
+    for (src, dst, op), call_df in trace_gp:
+        name = src + '-' + dst + '-' + op  # 生成唯一标识符
+        normal_traces[name].append(call_df)  # 收集追踪数据
+
+# 合并各pod的指标数据
+for pod in normal_metrics.keys():
+    for kpi, kpi_dfs in normal_metrics[pod].items():
+        normal_metrics[pod][kpi] = pd.concat(kpi_dfs)  # 将列表中的DataFrame合并
+
+# 创建保存目录
+os.makedirs('MicroSS/detector', exist_ok=True)
+
+# 保存处理后的数据
+io_util.save('MicroSS/detector/normal_traces.pkl', normal_traces)
+io_util.save('MicroSS/detector/normal_metrics.pkl', normal_metrics)
 
 ############################################################################
 
