@@ -125,7 +125,9 @@ def read_all_metrics():
 if __name__ == '__main__':
     # 记录整体处理开始时间
     total_start_time = time.time()
-    
+    print("========== 文件处理开始 ==========")
+    print(f"开始时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(total_start_time))}")
+
     # 注释掉的代码：处理原始trace和log数据
     trace_process_start = time.time()
     trace_df = process_traces("MicroSS/trace")
@@ -194,3 +196,8 @@ if __name__ == '__main__':
 
     io_util.save("MicroSS/pre-data.pkl", pre_data)
     io_util.save("MicroSS/post-data-10.pkl", post_data)
+
+    total_end_time = time.time()
+    print("========== 文件处理结束 ==========")
+    print(f"结束时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(total_end_time))}")
+    print(f"总用时: {total_end_time - total_start_time:.2f}秒")
