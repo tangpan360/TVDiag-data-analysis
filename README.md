@@ -38,6 +38,54 @@ git clone --branch release-v1.0 https://github.com/CloudWise-OpenSource/GAIA-Dat
 
 该命令会直接克隆仓库并检出到 `release-v1.0` 标签所指向的代码状态，下载完成后会得到完整的GAIA数据集文件。
 
+## 数据完整性校验
+
+为确保下载的数据集完整性，建议在解压数据前进行MD5校验和验证。
+
+### 1. 放置校验和文件
+
+将提供的`checksums.md5`文件放置到MicroSS目录中：
+
+```bash
+# 将checksums.md5文件复制到MicroSS目录
+cp checksums.md5 GAIA-DataSet/MicroSS/
+```
+
+### 2. 验证数据完整性
+
+进入MicroSS目录并执行校验：
+
+```bash
+cd GAIA-DataSet/MicroSS
+md5sum -c checksums.md5
+```
+
+### 3. 校验结果说明
+
+- **验证成功**：所有文件显示"OK"，表示数据完整
+- **验证失败**：显示"FAILED"的文件需要重新下载
+
+**示例输出**：
+```bash
+business/business_split.z01: OK
+business/business_split.z02: OK
+...
+metric/metric_split.z01: OK
+...
+run/run.zip: OK
+...
+trace/trace_split.z01: OK
+...
+MicroSS system description.docx: OK
+```
+
+**注意**：校验和文件包含83个文件的MD5值，包括：
+- Business目录：32个文件
+- Metric目录：17个文件  
+- Run目录：1个文件
+- Trace目录：32个文件
+- 文档文件 (MicroSS system description.docx)：1个文件 (这个实际不需要，校验完删除即可)
+
 GAIA 数据集包含来自 MicroSS 和 Companion Data 的数据，旨在支持根因分析算法的评估。以下是数据集的主要特点和结构：
 
 ### 数据集概述
