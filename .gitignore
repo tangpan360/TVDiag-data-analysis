@@ -12,7 +12,8 @@ ENV/
 .ipynb_checkpoints/
 
 # 数据文件
-/extractor/MicroSS
+/extractor/MicroSS/*
+!/extractor/MicroSS/gaia.csv
 
 # 日志文件
 *.log
