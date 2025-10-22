@@ -36,8 +36,18 @@ def process_traces(dir):
         return spans_df_temp
 
     def trans2timestamp(df: pd.DataFrame):
-        df['start_time'] = df['start_time'].apply(lambda x: time2stamp(str(x).split('.')[0]))
-        df['end_time'] = df['end_time'].apply(lambda x: time2stamp(str(x).split('.')[0]))
+        print("开始转换时间戳...")
+        total_rows = len(df)
+        print(f"需要处理 {total_rows} 行数据")
+        
+        # 使用tqdm显示进度条
+        tqdm.pandas(desc="转换start_time")
+        df['start_time'] = df['start_time'].progress_apply(lambda x: time2stamp(str(x).split('.')[0]))
+        
+        tqdm.pandas(desc="转换end_time")
+        df['end_time'] = df['end_time'].progress_apply(lambda x: time2stamp(str(x).split('.')[0]))
+        
+        print("trace 时间戳转换完成!")
         return df
 
     dfs = []
@@ -56,7 +66,12 @@ def process_logs(dir):
     def extract_Date(df: pd.DataFrame):
         df.dropna(axis=0, subset=['message'], inplace=True)
         df['timestamp'] = df['message'].map(lambda m: m.split(',')[0])
-        df['timestamp'] = df['timestamp'].apply(lambda x: time2stamp(str(x)))
+        
+        print(f"开始转换log时间戳，共 {len(df)} 行数据...")
+        tqdm.pandas(desc="转换log时间戳")
+        df['timestamp'] = df['timestamp'].progress_apply(lambda x: time2stamp(str(x)))
+        print("log时间戳转换完成!")
+        
         return df
 
     dfs = []
@@ -141,8 +156,12 @@ if __name__ == '__main__':
 
     # 读取故障标签数据
     label_df = pd.read_csv("MicroSS/gaia.csv")
-    label_df['st_time'] = label_df['st_time'].apply(lambda x: time2stamp(str(x).split('.')[0]))
-    label_df['ed_time'] = label_df['ed_time'].apply(lambda x: time2stamp(str(x).split('.')[0]))
+    print(f"开始转换标签时间戳，共 {len(label_df)} 行数据...")
+    tqdm.pandas(desc="转换st_time")
+    label_df['st_time'] = label_df['st_time'].progress_apply(lambda x: time2stamp(str(x).split('.')[0]))
+    tqdm.pandas(desc="转换ed_time")
+    label_df['ed_time'] = label_df['ed_time'].progress_apply(lambda x: time2stamp(str(x).split('.')[0]))
+    print("标签时间戳转换完成!")
 
     trace_df = pd.read_csv("MicroSS/trace.csv")
     log_df = pd.read_csv("MicroSS/log.csv")
