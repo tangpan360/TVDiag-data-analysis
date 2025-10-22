@@ -68,11 +68,9 @@ print(f'the time cost of extract log events is {log_time}')
 
 # 创建存储目录(如果不存在)
 import os
-os.makedirs('events/log', exist_ok=True)    # 日志事件目录
-os.makedirs('events/metric', exist_ok=True) # 指标事件目录
-os.makedirs('events/trace', exist_ok=True)  # 追踪事件目录
+os.makedirs('raw', exist_ok=True)    # 原始数据目录
 
 # 保存各类异常事件数据
-io_util.save_json('events/log/log.json', log_events_dic)      # 保存日志异常
-io_util.save_json('events/metric/metric.json', metric_events_dic)  # 保存指标异常
-io_util.save_json('events/trace/trace.json', trace_events_dic)    # 保存追踪异常
+io_util.save_json('raw/logs.json', log_events_dic)      # 保存日志异常
+io_util.save_json('raw/metrics.json', metric_events_dic)  # 保存指标异常
+io_util.save_json('raw/traces.json', trace_events_dic)    # 保存追踪异常

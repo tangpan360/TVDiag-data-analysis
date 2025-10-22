@@ -90,5 +90,5 @@ for idx, row in tqdm(label_df.iterrows(), total=label_df.shape[0]):
     edges[idx] = chunk['edges']
     nodes[idx] = chunk['nodes']
 # 将结果保存为json文件
-io_util.save_json('MicroSS/nodes.json', nodes)
-io_util.save_json('MicroSS/edges.json', edges)
+io_util.save_json('raw/nodes.json', nodes)
+io_util.save_json('raw/edges.json', edges)
